@@ -1,0 +1,95 @@
+;; Envelope parameters
+paramDef (mAttack 0.0 8.0 0.0 1)
+paramDef (mDecay 0.0 8.0 0.0 2)
+paramDef (mSustain 0.0 1.0 1.0 3)
+paramDef (mRelease 0.0 8.0 0.0 4)
+
+;; Tuning and phase for main oscillators
+paramDef (lTuning 0.99 1.01 1.0 5)
+paramDef (rTuning 1.01 0.99 1.0 5)
+paramDef (lPhase 0.0 1.0 0.0 6)
+paramDef (rPhase 0.0 1.0 0.0 7)
+paramDef (squareDuty 0.0 0.5 0.5 8)
+
+;; Parameters for HFO (High Frequency Oscillator)
+paramDef (hfoHarmonic 0.0 8.0 0.0 9)
+paramDef (hfoAttack 0.0 8.0 0.0 10)
+paramDef (hfoDecay 0.0 8.0 0.0 11)
+paramDef (hfoSustain 0.0 1.0 1.0 12)
+paramDef (hfoRelease 0.0 8.0 8.0 13)
+paramDef (hfoLevel 0.0 3200.0 0.0 14)
+paramDef (rhfoPhase 0.0 1.0 0.0 15)
+paramDef (lhfoPhase 0.0 1.0 0.0 16)
+paramDef (hfoSquareDuty 0.0 0.5 0.5 17)
+
+;; Parameters for AO (Amplitude Oscillator)
+paramDef (aoFrequency 0.0 8.0 1.0 18)
+paramDef (aoAttack 0.0 8.0 0.0 19)
+paramDef (aoDecay 0.0 8.0 0.0 20)
+paramDef (aoSustain 0.0 1.0 1.0 21)
+paramDef (aoRelease 0.0 8.0 8.0 22)
+paramDef (aolTuning 0.95 1.05 1.0 23)
+paramDef (aorTuning 1.05 0.95 1.0 23)
+paramDef (aolPhase 0.0 1.0 0.0 24)
+paramDef (aorPhase 0.0 1.0 0.0 25)
+paramDef (aoIntensity 1.0 0.0 1.0 26)
+paramDef (aoSquareDuty 0.0 0.5 0.5 27)
+
+;; Switchable wave types
+switchDef (waveType ((sineWave) (triangleWave) (squareWave) (sawWave)) 2 28)
+switchDef (hfoType ((sineHFO) (triangleHFO) (squareHFO) (sawHFO)) 2 29)
+switchDef (aoType ((sineAO) (triangleAO) (squareAO) (sawAO)) 2 30)
+switchDef (aoFreqBase ((2.0) (noteFrequency)) 1 31)
+
+;; NOTE PROGRAM
+
+;; Detune Amount
+operator (frequency multiply ((a (noteFrequency)) (b (lTuning rTuning))) 2)
+
+;; Main Oscillators
+operator (envelope adsr ((attackTime (mAttack)) (decayTime (mDecay)) (sustainLevel (mSustain)) (releaseTime (mRelease)) (peak (1.0)) (base (0.0))) 1)
+
+operator (addedFrequency add ((a (frequency)) (b (hfoAmp))) 2)
+operator (wavePositionx integral ((in (addedFrequency))) 2)
+operator (wavePosition add ((a (wavePositionx)) (b (lPhase rPhase))) 2)
+
+operator (sineWave sine ((in (wavePosition))) 2)
+operator (triangleWave triangle ((in (wavePosition))) 2)
+operator (squareWave square ((in (wavePosition)) (duty (squareDuty))) 2)
+operator (sawWave saw ((in (wavePosition))) 2)
+
+;; HFO
+operator (hfoEnvelope adsr ((attackTime (hfoAttack)) (decayTime (hfoDecay)) (sustainLevel (hfoSustain)) (releaseTime (hfoRelease)) (peak (1.0)) (base (0.0))) 1)
+
+operator (hfoFrequency multiply ((a (frequency)) (b (hfoHarmonic))) 2)
+operator (hfoPositionx integral ((in (hfoFrequency))) 2)
+operator (hfoPosition add ((a (hfoPositionx)) (b (lhfoPhase rhfoPhase))) 2)
+
+operator (sineHFO sine ((in (hfoPosition))) 2)
+operator (triangleHFO triangle ((in (hfoPosition))) 2)
+operator (squareHFO square ((in (hfoPosition)) (duty (hfoSquareDuty))) 2)
+operator (sawHFO saw ((in (hfoPosition))) 2)
+
+operator (hfoAmp multiply ((a (hfoType)) (b (hfoLevel)) (c (hfoEnvelope)) (d (noteVelocity))) 2)
+
+;; AMP OSCILLATOR
+operator (aoEnvelope adsr ((attackTime (aoAttack)) (decayTime (aoDecay)) (sustainLevel (aoSustain)) (releaseTime (aoRelease)) (peak (aoIntensity)) (base (1.0))) 1)
+
+operator (aoFrequencyxx multiply ((a (aoFreqBase)) (b (aoFrequency)) (c (aolTuning aorTuning))) 2)
+operator (aoPosition integral ((in (aoFrequencyxx))) 2)
+operator (aoPositionx add ((a (aoPosition)) (b (aolPhase aorPhase))) 2)
+
+operator (sineAO sine ((in (aoPositionx))) 2)
+operator (triangleAO triangle ((in (aoPositionx))) 2)
+operator (squareAO square ((in (aoPositionx)) (duty (aoSquareDuty))) 2)
+operator (sawAO saw ((in (aoPositionx))) 2)
+
+operator (aoOutput wtransform ((wave (aoType)) (peak (1.0)) (trough (aoEnvelope))) 2)
+
+
+;; FINAL WAVES
+operator (finalWave multiply ((a (waveType)) (b (envelope)) (c (noteVelocity)) (d (aoOutput))) 2)
+
+output (lchannel finalWave:1)
+output (rchannel finalWave:2)
+output (exist envelope)
