@@ -13,5 +13,5 @@ kernel void saw(    global float* heap,
     global float* out = heap + vOff[get_global_id(1)] + outOff[get_global_id(2)];
 
    float wposition = t[i] + 0.25f;
-   out[i] = (modulo1(wposition * 2.0f) * 2.0f) - 1.0f;
+   out[i] = (modulo1(wposition * 1.0f) * 2.0f) - 1.0f;
 }
