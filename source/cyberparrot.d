@@ -81,8 +81,9 @@ void feedEvent(immutable MidiEvent event)
     if(event.isSystemEvent)
         return;
 
-    //Can't do anything with drum channel (yet).
-    if(event.channel == 9)
+    //Internally, MIDI channels are numbered 0-15.
+    //We take away 1 here so that externally we use numbers 1-16
+    if(event.channel != getConfigVar("midiChannel", 1) - 1)
         return;
     
     if(event.statusCode == MidiStatusCode.noteOn)
