@@ -7,6 +7,7 @@ import cyberparrot.patchmap;
 import cyberparrot.clutil;
 import cyberparrot.misc;
 import cyberparrot.midi.midievent;
+import cyberparrot.midi.channelstate;
 import cyberparrot.audio;
 import cyberparrot.time;
 
@@ -71,9 +72,7 @@ ref float[] generateSamples()
     return outSamples;
 }
 
-//FIXME: This variable needs to belong to a voice controller, and there should be
-//one voice controller per channel.
-ushort[MidiChannelControl.numControls] channelControls = [0];
+ChannelState channelState;
 
 void feedEvent(immutable MidiEvent event)
 {    
@@ -94,11 +93,15 @@ void feedEvent(immutable MidiEvent event)
         
     if(event.statusCode == MidiStatusCode.controlChange)
     {
-        if(event.isChannelControl)
+        if(channelState.processEvent(event))
         {
-            event.applyChannelControl(channelControls[event.channelControlID]);
-            tryChangeParam(event);
-            tryChangeSwitch(event);
+            auto change = channelState.getChangedControl(event);
+
+            if(change.controlID !is null)
+            {
+                tryChangeParam(change);
+                tryChangeSwitch(change);
+            }
         }
         
         //FIXME: HACK
@@ -151,58 +154,48 @@ void tryReleaseVoice(immutable MidiEvent event)
     }
 }
 
-void tryChangeParam(immutable MidiEvent event)
+void tryChangeParam(ChannelStateChange change)
 {
-    if(event.isChannelControl)
-    {
-        float weight = channelControls[event.channelControlID] / 16384.0;
+    float weight = change.value;
 
-        foreach(paramID; paramLinks.get(event.channelControlID, []))
-        {
-            auto param = tree.parameters[paramID];
-            float paramValue = (param.minValue * (1.0 - weight)) + (param.maxValue * weight);
-            debugMSG("patch", writefln("Setting param %s to %f", paramID, paramValue));
-            tree.heap.fillBlock(tree.parameters[paramID].outBlockID, paramValue);
-        }
+    foreach(paramID; paramLinks.get(change.controlID, []))
+    {
+        auto param = tree.parameters[paramID];
+        float paramValue = (param.minValue * (1.0 - weight)) + (param.maxValue * weight);
+        debugMSG("patch", writefln("Setting param %s to %f", paramID, paramValue));
+        tree.heap.fillBlock(tree.parameters[paramID].outBlockID, paramValue);
     }
 }
 
-void tryChangeSwitch(immutable MidiEvent event)
-{
-    if(event.isChannelControl)
-    {        
-        float normalized = channelControls[event.channelControlID] / 16384.0;
+void tryChangeSwitch(ChannelStateChange change)
+{     
+    float normalized = change.value;
 
-        foreach(switchID; switchLinks.get(event.channelControlID, []))
-        {
-            auto sw = tree.switches[switchID];
-            int selection = cast(int) (normalized * sw.selections.length);
+    foreach(switchID; switchLinks.get(change.controlID, []))
+    {
+        auto sw = tree.switches[switchID];
+        int selection = cast(int) (change.value * sw.selections.length);
 
-            //Corner case --- if normalized is 1.0, then selection == numSelections
-            if(selection >= sw.selections.length)
-                selection = cast(int) (sw.selections.length - 1);
+        //Corner case --- if normalized is 1.0, then selection == numSelections
+        if(selection >= sw.selections.length)
+            selection = cast(int) (sw.selections.length - 1);
 
-            sw.changeSelection(selection);
-        }
+        sw.changeSelection(selection);
     }
 }
 
 //A lookup of parameter names, by CC number
-string[][ubyte] paramLinks;
-string[][ubyte] switchLinks;
+string[][string] paramLinks;
+string[][string] switchLinks;
 
 void buildParamLinks()
 {
     foreach(pDef; tree.patch.paramDefs)
-    {
-        //CC numbers 120 and up are special.
-        if(pDef.ccNum >= 120)
-            continue;
-        
-        if((pDef.ccNum in paramLinks) is null)
-            paramLinks[pDef.ccNum] = [];
+    {        
+        if((pDef.controlID in paramLinks) is null)
+            paramLinks[pDef.controlID] = [];
             
-        paramLinks[pDef.ccNum] ~= pDef.id;
+        paramLinks[pDef.controlID] ~= pDef.id;
     }
 }
 
@@ -210,12 +203,9 @@ void buildSwitchLinks()
 {
     foreach(sDef; tree.patch.switchDefs)
     {
-        if(sDef.ccNum >= 120)
-            continue;
+        if((sDef.controlID in switchLinks) is null)
+            switchLinks[sDef.controlID] = [];
 
-        if((sDef.ccNum in switchLinks) is null)
-            switchLinks[sDef.ccNum] = [];
-
-        switchLinks[sDef.ccNum] ~= sDef.id;
+        switchLinks[sDef.controlID] ~= sDef.id;
     }
 }

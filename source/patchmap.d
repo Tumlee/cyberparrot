@@ -39,15 +39,15 @@ class ParamDef
     float maxValue;
     float minValue;
     float defaultValue;
-    ubyte ccNum;
+    string controlID;
 
-    this(string newID, float mn = 0, float mx = 0, float d = 0, ubyte cc = 0xff)
+    this(string newID, float mn = 0, float mx = 0, float d = 0, string ci = null)
     {
         id = newID;
         minValue = mn;
         maxValue = mx;
         defaultValue = d;
-        ccNum = cc;
+        controlID = ci;
     }
 }
 
@@ -56,7 +56,7 @@ class SwitchDef
     string id;
     ConnectionList[] selections;
     int width;
-    ubyte ccNum;
+    string controlID;
 }
 
 class OutputInfo
@@ -241,7 +241,7 @@ ParamDef parseParamDef(const PValue pv)
                             pv.extractElement!float(1),
                             pv.extractElement!float(2),
                             pv.extractElement!float(3),
-                            pv.extractElement!ubyte(4));
+                            pv.extractElement!string(4));
 }
 
 SwitchDef parseSwitchDef(const PValue pv)
@@ -257,7 +257,7 @@ SwitchDef parseSwitchDef(const PValue pv)
     sdef.id = pv.elements[0].value;
     sdef.selections = parseSelectionList(pv.elements[1]);
     sdef.width = pv.extractElement!int(2);
-    sdef.ccNum = pv.extractElement!ubyte(3);
+    sdef.controlID = pv.extractElement!string(3);
     
     return sdef;
 }
