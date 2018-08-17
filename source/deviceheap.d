@@ -165,19 +165,4 @@ class BlockList
     {
         return (ids.length != 0) && (offsets !is null);
     }
-
-    //Reserve the
-
-    /*BlockID[] wrapBlockIDList(BlockID[] baseList, size_t width)
-    {
-        assert(baseList.length != 0);
-        
-        BlockID[] returnList;
-        returnList.length = width;
-        
-        foreach(i; 0 .. width)
-            returnList[i] = baseList[i % $];
-        
-        return returnList;
-    }*/
 }
