@@ -208,6 +208,7 @@ struct VoiceInfo
 {
     uint voiceID;       //Actual voice number, should be 0 .. tree.voiceCount
     uint vOff;          //Voice offset for this particular voice.
+    float noteFrequency;    //Used to generate "noteFrequency" block.
     float pStart = 0;   //PressClock for the start of this period.
     float pEnd = 0;     //PressClock for the end of this period.
     float rStart = 0;   //ReleaseClock for the start of this period.
@@ -715,6 +716,7 @@ class OpTree
         VoiceInfo newVoice;
         newVoice.voiceID = vid;
         newVoice.vOff = newVoice.voiceID * sampleCount;
+        newVoice.noteFrequency = freq;
 
         foreach(operator; operators)
             operator.initVoice(vid);
