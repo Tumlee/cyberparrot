@@ -103,14 +103,9 @@ void feedEvent(immutable MidiEvent event)
                 tryChangeSwitch(change);
             }
         }
-        
-        //FIXME: HACK
-        /*if(event.data[1] == 0x7b)
-        {
-            //This event releases all voices.
-            foreach(ubyte n; 0 .. 128)
-                tree.tryReleaseVoice(new MidiEvent());
-        }*/
+
+        if(event.turnsNotesOff())
+            releaseAllVoices();
     }
 }
 
@@ -152,6 +147,14 @@ void tryReleaseVoice(immutable MidiEvent event)
         tree.releaseVoice(heldNotes[event.noteNumber]);
         heldNotes.remove(event.noteNumber);
     }
+}
+
+void releaseAllVoices()
+{
+    foreach(vid; heldNotes)
+        tree.releaseVoice(vid);
+
+    heldNotes.clear();
 }
 
 void tryChangeParam(ChannelStateChange change)
