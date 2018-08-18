@@ -15,13 +15,15 @@ typedef struct
 kernel void generatePRClocks(   global float* heap,
                                 constant VoiceInfo* activeVoices,
                                 uint pClockOff,
-                                uint rClockOff)
+                                uint rClockOff,
+                                uint nFreqOff)
 {
     uint i = get_global_id(0);
     constant VoiceInfo* vinfo = &activeVoices[get_global_id(1)];
     
     global float* pressClock = heap + vinfo->vOff + pClockOff;
     global float* releaseClock = heap + vinfo->vOff + rClockOff;
+    global float* noteFrequency = heap + vinfo->vOff + nFreqOff;
 
     //We add the +1 here so that the pressClock is never zero, which would cause
     //any voice to terminate instantly.
@@ -29,6 +31,7 @@ kernel void generatePRClocks(   global float* heap,
 
     pressClock[i] = (vinfo->pStart * (1.0f - endWeight)) + (vinfo->pEnd * endWeight);
     releaseClock[i] = (vinfo->rStart * (1.0f - endWeight)) + (vinfo->rEnd * endWeight);
+    noteFrequency[i] = vinfo->noteFrequency;
 }
 
 //NOTE: there are a lot of global values being access more than once in this function,

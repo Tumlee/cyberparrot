@@ -636,7 +636,8 @@ class OpTree
         deviceVInfo = new CLMemory!VoiceInfo(voiceCount);
         prKernel.setArgs(heap.memory, deviceVInfo,
                         resolveBlockIDs("pressClock")[0] * blockSize,
-                        resolveBlockIDs("releaseClock")[0] * blockSize);
+                        resolveBlockIDs("releaseClock")[0] * blockSize,
+                        resolveBlockIDs("noteFrequency")[0] * blockSize);
 
         //'searches' must be a mutliple of the block width.
         assert(sampleCount % searches == 0);
@@ -720,12 +721,8 @@ class OpTree
 
         foreach(operator; operators)
             operator.initVoice(vid);
-            
-        auto freqBlock = resolveBlockIDs("noteFrequency")[0];
-        auto velBlock = resolveBlockIDs("noteVelocity")[0];
 
-        fillVoice(freqBlock, vid, freq);
-        fillVoice(velBlock, vid, vel);
+        fillVoice(resolveBlockIDs("noteVelocity")[0], vid, vel);
 
         activeVoices ~= newVoice;
     }
