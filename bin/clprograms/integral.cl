@@ -2,6 +2,7 @@ typedef struct
 {
     uint voiceID;
     uint vOff;      //Voice offset for this voice.
+    float noteFrequency;    //Used to generate "noteFrequency" block.
     float pStart;   //PressClock for the start of this period.
     float pEnd;     //PressClock for the end of this period.
     float rStart;   //ReleaseClock for the start of this period.
