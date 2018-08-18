@@ -86,6 +86,7 @@ struct ChannelState
     
     MidiBytePair[127][127] rpnTable;
     MidiBytePair[127][127] nrpnTable;
+    MidiBytePair pitchWheel = MidiBytePair(64, 0);
     ubyte[96] ccTable;
 
     //Processed a MIDI event and updates the relevant parts of the ChannelState.
@@ -141,6 +142,12 @@ struct ChannelState
                 if(event.data[1] < 96)
                     return changeByte(ccTable[event.data[1]], event.data[2]);
             }
+        }
+
+        if(event.statusCode == MidiStatusCode.pitchWheel)
+        {
+            return changeByte(pitchWheel.msb, event.data[2]) ||
+                    changeByte(pitchWheel.lsb, event.data[1]);
         }
 
         return false;
