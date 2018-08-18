@@ -16,7 +16,8 @@ kernel void generatePRClocks(   global float* heap,
                                 constant VoiceInfo* activeVoices,
                                 uint pClockOff,
                                 uint rClockOff,
-                                uint nFreqOff)
+                                uint nFreqOff,
+                                constant float* pitchWheel)
 {
     uint i = get_global_id(0);
     constant VoiceInfo* vinfo = &activeVoices[get_global_id(1)];
@@ -31,7 +32,12 @@ kernel void generatePRClocks(   global float* heap,
 
     pressClock[i] = (vinfo->pStart * (1.0f - endWeight)) + (vinfo->pEnd * endWeight);
     releaseClock[i] = (vinfo->rStart * (1.0f - endWeight)) + (vinfo->rEnd * endWeight);
-    noteFrequency[i] = vinfo->noteFrequency;
+
+    //Calculate current pitch shift in semitones, scaling smoothly between old value
+    //pitchWheel[1] and new value pitchWheel[0].
+    float semitones = (pitchWheel[1] * (1.0f - endWeight)) + (pitchWheel[0] * endWeight);
+    
+    noteFrequency[i] = vinfo->noteFrequency * pow(2.0f, semitones / 12.0f);
 }
 
 //NOTE: there are a lot of global values being access more than once in this function,

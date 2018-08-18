@@ -245,6 +245,7 @@ class OpTree
     BlockID[float] constants;
     OParm[string] outputs;
     SwitchableConnection[string] switches;
+    float[2] pitchWheel = [0, 0];   //index 0 stores current value, 1 stores old value.
     uint voiceCount;
     uint sampleCount;
 
@@ -266,6 +267,7 @@ class OpTree
     CLMemory!uint numFinds; //Number of potential zero positions returned by fzKernel
     CLMemory!uint clipPositions;    //The position at which gsKernel decided to clip each voice.
     CLMemory!VoiceInfo deviceVInfo; //Device-side mirror of activeVoices[]
+    CLMemory!float devicePitchWheel;
         
     //Whether or not the OpTree has been "built" using OpTree.build()
     bool isBuilt = false;
@@ -547,6 +549,7 @@ class OpTree
             vinfo.advanceClock(timeStep * sampleCount);
             
         syncVoices();
+        devicePitchWheel.write(pitchWheel); //Sync pitchWheel values to device as well.
         
         prKernel.enqueue([sampleCount, activeVoices.length]);
     }
@@ -556,6 +559,9 @@ class OpTree
         gsKernel.setArg(3, cast(uint) activeVoices.length);
         fzKernel.enqueue([sampleCount / searches, activeVoices.length]);
         gsKernel.enqueue([sampleCount]);
+
+        //Store current pitchwheel value into "old" pitchwheel value.
+        pitchWheel[1] = pitchWheel[0];
     }
 
     void build()
@@ -628,6 +634,7 @@ class OpTree
         //Allocate the device heap.
         heap.allocate();
         vOff = new CLMemory!uint(voiceCount);
+        devicePitchWheel = new CLMemory!float(2);
 
         //Create the kernel.
         prKernel = new CLKernel("adsr", "generatePRClocks");
@@ -637,7 +644,8 @@ class OpTree
         prKernel.setArgs(heap.memory, deviceVInfo,
                         resolveBlockIDs("pressClock")[0] * blockSize,
                         resolveBlockIDs("releaseClock")[0] * blockSize,
-                        resolveBlockIDs("noteFrequency")[0] * blockSize);
+                        resolveBlockIDs("noteFrequency")[0] * blockSize,
+                        devicePitchWheel);
 
         //'searches' must be a mutliple of the block width.
         assert(sampleCount % searches == 0);

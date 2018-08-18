@@ -107,6 +107,16 @@ void feedEvent(immutable MidiEvent event)
         if(event.turnsNotesOff())
             releaseAllVoices();
     }
+
+    if(event.statusCode == MidiStatusCode.pitchWheel)
+    {
+        if(channelState.processEvent(event))
+        {
+            //Currently, pitch wheel sensitivity is locked into range of +/- 2 semitones.
+            float semitones = channelState.pitchWheel.normalizedValue() * 4.0 - 2.0;
+            tree.pitchWheel[0] = semitones;
+        }
+    }
 }
 
 //Listing of held notes, by MIDI code.
