@@ -55,12 +55,10 @@ class StatSampler
 void analyzePerformance()
 {
     auto sampler = new StatSampler(250);
-    
-    //FIXME: These commands should not be hard-coded.
-    feedEvent(new immutable MidiEvent(0xb0, 0x13, 0x64, currentTime()));
-    
+
+    //Activate every voice available.
     foreach(v; 0 .. voiceCount)
-        feedEvent(new immutable MidiEvent(0x90, cast(ubyte) (0x10 + v), 0x64, currentTime()));
+        tree.activateVoice(v, 100.0 * v, 0.75);
 
     foreach(i; 0 .. 250)
     {
