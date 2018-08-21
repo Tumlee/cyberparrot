@@ -14,16 +14,34 @@ To build this project, simply navigate into the main Cyberparrot directory and e
 Cyberparrot runs in the background with no direct user interface. An external MIDI keyboard or sequencer must be connected in order to get sound out of this program. Under Linux, it is a good idea to run JACK first in order to have minimal delay.
 The following command line paramters are supported:
 
+## Audio
 
---samplerate <N>
+`--samplerate <N>`
   Sets the audio sample rate, default is 44100hz.
   
---voicecount <N>
+`--voicecount <N>`
   Sets the maximum number of voices that can be played simultaneously. Default is 32.
   
---period <N>
+`--period <N>`
   Default is 512. Generate audio in N sample chunks. Because of the nature of OpenCL kernel calls, raising this value can greatly increase performance at the cost of increasing delay.
   
   The amount of GPU memory that Cyberparrot requires is usually in the order of a few Megabytes, and can vary depending on the patch configuration.
   In general, the maximum amount of memory that can be taken up by a given patch is (4 * period * voicecount * (number_of_operators + number_of_paramters))
   The delay, in milliseconds, is given by the formula (period * 1000 / samplerate)
+
+## Benchmarking and debugging
+
+`--debug-opencl`
+  Print additional OpenCL information such as the selected compute device.
+
+`--debug-patch`
+  Print information relating to how Operators are linked together when compiling a patch.
+
+`--debug-midi`
+  Print incoming MIDI events and displays information about the selected MIDI device.
+
+`--debug-audio`
+  Print information regarding OpenAL, report any audio stream underruns.
+
+`--benchmark`
+  Benchmarks the default patch and prints out the average "stress" level (time elapsed divided by deadline) as well as the standard deviation.
