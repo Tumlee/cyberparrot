@@ -63,6 +63,7 @@ void initCL()
     chosenDevice = deviceIDs[0];
     
     debugMSG("opencl", writefln("Selected OpenCL device: %s", getCLDeviceInfo!char(chosenDevice, CL_DEVICE_NAME)));
+    debugMSG("opencl", writefln("Supported OpenCL version: %s", getCLVersionString(chosenDevice)));
     
     int errorCode;
     context = clCreateContext(null, 1, &chosenDevice, null, null, &errorCode);
@@ -70,6 +71,11 @@ void initCL()
         
     queue = clCreateCommandQueue(context, chosenDevice, 0, &errorCode);
     checkErrorCode("clCreateCommandQueue", errorCode);
+}
+
+string getCLVersionString(cl_device_id deviceID)
+{
+    return getCLDeviceInfo!char(deviceID, CL_DEVICE_VERSION).idup;
 }
 
 bool clVersionAtLeast(cl_device_id deviceID, int majorVersion, int minorVersion)
