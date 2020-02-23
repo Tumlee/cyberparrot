@@ -4,3 +4,4 @@ dub.selections.json
 bin/cyberparrot
 bin/cyberparrot.exe
 
+.vscode/
