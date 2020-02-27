@@ -1,6 +1,7 @@
 module cyberparrot.patchmap;
 
 import cyberparrot.pvalue;
+import cyberparrot.serialization;
 import std.stdio;
 import std.string;
 import std.algorithm;
@@ -10,36 +11,37 @@ import std.algorithm;
 //and also connect them in the right configuration. 
 alias ConnectionList = string[];
 
-class PatchMap
+class PatchMap : Serializable
 {
-    OperatorInfo[] operators;
-    ParamDef[] paramDefs;
-    SwitchDef[] switchDefs;
-    OutputInfo[] outputs;
+    @DataMember() OperatorInfo[string] operators;
+    @DataMember() ParamDef[string] paramDefs;
+    @DataMember() SwitchDef[string] switchDefs;
+    @DataMember() OutputInfo[string] outputs;
 }
 
-class OperatorInfo
+class OperatorInfo : Serializable
 {
     string name;
-    string type;
-    ParamInfo[] params;
-    int width;
+    @DataMember() string type;
+    //@DataMember() ParamInfo[] params;
+    @DataMember() ConnectionList[string] params;
+    @DataMember() int width;
 }
 
 //FIXME: Rename?
-class ParamInfo
+class ParamInfo : Serializable
 {
-    string id;
-    ConnectionList connections;
+    @DataMember() string id;
+    @DataMember() ConnectionList connections;
 }
 
-class ParamDef
+class ParamDef : Serializable
 {
     string id;
-    float maxValue;
-    float minValue;
-    float defaultValue;
-    string controlID;
+    @DataMember() float maxValue;
+    @DataMember() float minValue;
+    @DataMember() float defaultValue;
+    @DataMember() string controlID;
 
     this(string newID, float mn = 0, float mx = 0, float d = 0, string ci = null)
     {
@@ -51,18 +53,18 @@ class ParamDef
     }
 }
 
-class SwitchDef
+class SwitchDef : Serializable
 {
     string id;
-    ConnectionList[] selections;
-    int width;
-    string controlID;
+    @DataMember() ConnectionList[] selections;
+    @DataMember() int width;
+    @DataMember() string controlID;
 }
 
-class OutputInfo
+class OutputInfo : Serializable
 {
     string id;
-    string connection;
+    @DataMember() string connection;
 }
 
 //FIXME: Exceptions are thrown here, but not handled as of yet.
@@ -125,19 +127,23 @@ PatchMap readPatchMap(string filename)
             
             if(directive == "operator")
             {
-                patch.operators ~= parseOperator(pv.elements[1]);
+                OperatorInfo operator = parseOperator(pv.elements[1]);
+                patch.operators[operator.name] = operator;
             }
             else if(directive == "paramDef")
             {
-                patch.paramDefs ~= parseParamDef(pv.elements[1]);
+                ParamDef paramDef = parseParamDef(pv.elements[1]);
+                patch.paramDefs[paramDef.id] = paramDef;
             }
             else if(directive == "switchDef")
             {
-                patch.switchDefs ~= parseSwitchDef(pv.elements[1]);
+                SwitchDef switchDef = parseSwitchDef(pv.elements[1]);
+                patch.switchDefs[switchDef.id] = switchDef;
             }
             else if(directive == "output")
             {
-                patch.outputs ~= parseOutput(pv.elements[1]);
+                OutputInfo output = parseOutput(pv.elements[1]);
+                patch.outputs[output.id] = output;
             }
             else
             {
@@ -167,7 +173,11 @@ OperatorInfo parseOperator(const PValue pv)
 
     info.name = pv.elements[0].value;
     info.type = pv.elements[1].value;
-    info.params = parseParams(pv.elements[2]);
+    ParamInfo[] params = parseParams(pv.elements[2]);
+    
+    foreach(param; params)
+        info.params[param.id] = param.connections;
+
     info.width = pv.extractElement!int(3);
     
     return info;

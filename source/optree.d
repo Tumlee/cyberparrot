@@ -373,8 +373,8 @@ class OpTree
         operator.name = info.name;
         operator.width = info.width;
         
-        foreach(pInfo; info.params)
-            operator.parms[pInfo.id] = new OParm(this, pInfo.connections, info.width, true);
+        foreach(parmID; info.params.byKey)
+            operator.parms[parmID] = new OParm(this, info.params[parmID], info.width, true);
     }
     
     void addSwitch(SwitchDef switchDef)
@@ -419,11 +419,11 @@ class OpTree
     //and assign them their own BlockIDs.
     void findConstants()
     {
-        auto opConstants = patch.operators              //Every Operator
-            .map!(operator => operator.params).joiner   //Every parameter
-            .map!(param => param.connections).joiner;   //Every connection
+        auto opConstants = patch.operators.byValue              //Every Operator
+            .map!(operator => operator.params.byValue).joiner   //Every parameter
+            .joiner;                                            //Every connection
 
-        auto swConstants = patch.switchDefs                 //Every switch
+        auto swConstants = patch.switchDefs.byValue         //Every switch
             .map!(switchDef => switchDef.selections).joiner //Every selection
             .joiner;                                        //Every connection.
 
