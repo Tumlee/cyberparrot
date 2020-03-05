@@ -12,7 +12,7 @@ interface Serializable
 {
 }
 
-T deserialize(T:Serializable)(JSONValue jv)
+T deserialize(T:Serializable)(JSONValue jv, string jsonStack = "root")
 {
     if(jv.type == JSONType.null_)
         return null;
@@ -43,7 +43,7 @@ T deserialize(T:Serializable)(JSONValue jv)
         {
             //FIXME: Still need to handle arrays
             JSONValue jsonField = jv[fieldName];
-            __traits(getMember, obj, field.stringof) = deserialize!(typeof(field))(jsonField);
+            __traits(getMember, obj, field.stringof) = deserialize!(typeof(field))(jsonField, jsonStack ~ "." ~ fieldName);
         }
         else
         {
@@ -59,7 +59,7 @@ T deserialize(T:Serializable)(JSONValue jv)
 }
 
 //Deserialization for basic types, arrays, and associative arrays.
-T deserialize(T:long)(JSONValue jv)
+T deserialize(T:long)(JSONValue jv, string jsonStack)
 {
     if(jv.type != JSONType.integer)
         throw new Exception("Expected integer type.");
@@ -72,7 +72,7 @@ T deserialize(T:long)(JSONValue jv)
     return cast(T) jv.integer;
 }
 
-T deserialize(T:string)(JSONValue jv)
+T deserialize(T:string)(JSONValue jv, string jsonStack)
 {
     if(jv.type == JSONType.null_)
         return null;
@@ -83,7 +83,7 @@ T deserialize(T:string)(JSONValue jv)
     return jv.str;
 }
 
-T deserialize(T:bool)(JSONValue jv)
+T deserialize(T:bool)(JSONValue jv, string jsonStack)
 {
     if(jv.type == JSONType.true_)
         return true;
@@ -94,40 +94,43 @@ T deserialize(T:bool)(JSONValue jv)
     throw new Exception("Expected boolean type");
 }
 
-T deserialize(T:double)(JSONValue jv)
+T deserialize(T:double)(JSONValue jv, string jsonStack)
 {
     //FIXME: This should be handled by nullable types instead.
     if(jv.type == JSONType.null_)
         return T.nan;
+
+    if(jv.type == JSONType.integer)
+        return cast(T) jv.integer;
     
     if(jv.type != JSONType.float_)
-        throw new Exception("Expected float type.");
+        throw new Exception("Expected float type: " ~ jsonStack);
 
     return jv.floating;
 }
 
-T deserialize(T)(JSONValue jv) if(isArray!T)
+T deserialize(T)(JSONValue jv, string jsonStack) if(isArray!T)
 {
     if(jv.type != JSONType.array)
-        throw new Exception("Expected an array type");
+        throw new Exception("Expected an array type: " ~ jsonStack);
 
     T array;
 
     foreach(element; jv.array)
-        array ~= deserialize!(typeof(array[0]))(element);
+        array ~= deserialize!(typeof(array[0]))(element, jsonStack); //FIXME
 
     return array;
 }
 
-T deserialize(T)(JSONValue jv) if(isAssociativeArray!T && is(KeyType!T == string))
+T deserialize(T)(JSONValue jv, string jsonStack) if(isAssociativeArray!T && is(KeyType!T == string))
 {
     if(jv.type != JSONType.object)
-        throw new Exception("Expected an object type");
+        throw new Exception("Expected an object type: " ~ jsonStack);
 
     T aa;
 
     foreach(key; jv.object.keys)
-        aa[key] = deserialize!(ValueType!T)(jv.object[key]);
+        aa[key] = deserialize!(ValueType!T)(jv.object[key], jsonStack ~ "." ~ key);
 
     return aa;
 }
