@@ -345,9 +345,9 @@ class OpTree
         }
     }
     
-    void addParameter(ParamDef info)
+    void addParameter(ParamDef info, string id)
     {
-        checkNameAvailable(info.id, "parameter");
+        checkNameAvailable(id, "parameter");
        
         auto param = new ParameterControl; 
         
@@ -356,42 +356,42 @@ class OpTree
         param.defaultValue = info.defaultValue;
         param.outBlockID = heap.reserveAvailableBlocks(1)[0];
         
-        debugMSG("patch", writefln("[+] Param %s reserved block %d", info.id, param.outBlockID));
+        debugMSG("patch", writefln("[+] Param %s reserved block %d", id, param.outBlockID));
         
-        parameters[info.id] = param;
+        parameters[id] = param;
     }
     
-    void addOperator(OperatorInfo info)
+    void addOperator(OperatorInfo info, string id)
     {
-        checkNameAvailable(info.name, "operator");
+        checkNameAvailable(id, "operator");
 
         if((info.type in operatorSpawners) is null)
             throw new Exception("Cannot spawn Operator of invalid type " ~ info.type);
             
         auto operator = operatorSpawners[info.type](this);
-        operators[info.name] = operator;
-        operator.name = info.name;
+        operators[id] = operator;
+        operator.name = id;
         operator.width = info.width;
         
         foreach(parmID; info.params.byKey)
             operator.parms[parmID] = new OParm(this, info.params[parmID], info.width, true);
     }
     
-    void addSwitch(SwitchDef switchDef)
+    void addSwitch(SwitchDef switchDef, string id)
     {
-        checkNameAvailable(switchDef.id, "switch");
+        checkNameAvailable(id, "switch");
         
         auto sw = new SwitchableConnection(this);
         
-        switches[switchDef.id] = sw;
+        switches[id] = sw;
         
         foreach(selection; switchDef.selections)
-            switches[switchDef.id].selections ~= new OParm(this, selection, switchDef.width, false);
+            switches[id].selections ~= new OParm(this, selection, switchDef.width, false);
     }
     
-    void addOutput(OutputInfo info)
+    void addOutput(OutputInfo info, string id)
     {
-        outputs[info.id] = new OParm(this, [info.connection], 1, false);
+        outputs[id] = new OParm(this, [info.connection], 1, false);
     }
     
     void registerSwitchDependents()
@@ -573,26 +573,26 @@ class OpTree
 
         debugMSG("patch", writeln("[Spawning reserved parameters...]"));
         foreach(reservedID; ["isHeld", "noteFrequency", "noteVelocity", "pressClock", "releaseClock"])
-            addParameter(new ParamDef(reservedID));
+            addParameter(new ParamDef, reservedID);
         
         debugMSG("patch", writeln("[Spawning parameters...]"));
-        foreach(paramDef; patch.paramDefs)
-            addParameter(paramDef);
+        foreach(id; patch.paramDefs.byKey)
+            addParameter(patch.paramDefs[id], id);
             
         debugMSG("patch", writeln("[Finding constants...]"));
         findConstants();
         
         debugMSG("patch", writeln("[Spawning operators...]"));
-        foreach(info; patch.operators)
-            addOperator(info);
+        foreach(id; patch.operators.byKey)
+            addOperator(patch.operators[id], id);
             
         debugMSG("patch", writeln("[Spawning switches...]"));
-        foreach(switchDef; patch.switchDefs)
-            addSwitch(switchDef);
+        foreach(id; patch.switchDefs.byKey)
+            addSwitch(patch.switchDefs[id], id);
 
         debugMSG("patch", writeln("[Regsitering Outputs...]"));
-        foreach(oInfo; patch.outputs)
-            addOutput(oInfo);
+        foreach(id; patch.outputs.byKey)
+            addOutput(patch.outputs[id], id);
         
         debugMSG("patch", writeln("[Reserving BlockIDs for Operators]"));
         assignBlockIDs();

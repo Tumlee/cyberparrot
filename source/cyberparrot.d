@@ -10,6 +10,7 @@ import cyberparrot.midi.midievent;
 import cyberparrot.midi.channelstate;
 import cyberparrot.audio;
 import cyberparrot.time;
+import cyberparrot.serialization;
 
 import std.stdio;
 import std.algorithm;
@@ -35,7 +36,7 @@ void initCyberparrot()
     voiceCount = getConfigVar("voicecount", 16);     
     audioSampleRate = getConfigVar("samplerate", 44100);
 
-    auto patch = readPatchMap("patches/000.cpm".inConfigPath);
+    PatchMap patch = loadFromJsonFile!PatchMap("patches/patch000.json".inConfigPath);
     tree = new OpTree(patch, voiceCount, sampleLength, audioSampleRate);
     
     //Build the tree.
@@ -203,22 +204,26 @@ string[][string] switchLinks;
 
 void buildParamLinks()
 {
-    foreach(pDef; tree.patch.paramDefs)
-    {        
+    foreach(paramID; tree.patch.paramDefs.byKey)
+    {
+        auto pDef = tree.patch.paramDefs[paramID];
+
         if((pDef.controlID in paramLinks) is null)
             paramLinks[pDef.controlID] = [];
             
-        paramLinks[pDef.controlID] ~= pDef.id;
+        paramLinks[pDef.controlID] ~= paramID;
     }
 }
 
 void buildSwitchLinks()
 {
-    foreach(sDef; tree.patch.switchDefs)
+    foreach(switchID; tree.patch.switchDefs.byKey)
     {
+        auto sDef = tree.patch.switchDefs[switchID];
+
         if((sDef.controlID in switchLinks) is null)
             switchLinks[sDef.controlID] = [];
 
-        switchLinks[sDef.controlID] ~= sDef.id;
+        switchLinks[sDef.controlID] ~= switchID;
     }
 }
