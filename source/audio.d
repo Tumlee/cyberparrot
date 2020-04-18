@@ -132,7 +132,8 @@ class AudioSource
         //Start playing the source if it's not already playing.
         if(get(AL_SOURCE_STATE) != AL_PLAYING)
         {
-            debugMSG("audio", writeln("<Audio stream underrun>"));
+            long missedMS = (currentTime() - playbackEnd).total!"msecs";
+            debugMSG("audio", writefln("<Audio stream underrun (missed by %dms)>", missedMS));
             playbackEnd = currentTime();
             alSourcePlay(id);
         }
