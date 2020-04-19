@@ -23,12 +23,19 @@ SynthCore synthCore;
 class SynthCore : Core
 {
     Duration baseTime;
+    string captureFileName = null;
     WavCollector wav;
 
     this(string tName)
     {
         super(tName);
-        wav = new WavCollector(getAudioSampleRate(), getAudioNumChannels());
+
+        //Open up a WavCollector if a capture file is specified in the command line or CFG file.
+        captureFileName = getConfigVar!string("capture-file", null);
+
+        if(captureFileName !is null)
+            wav = new WavCollector(getAudioSampleRate(), getAudioNumChannels());
+        
         initCyberparrot();
         synthCore = this;
     }
@@ -54,7 +61,9 @@ class SynthCore : Core
         auto samples = generateSamples();
                 
         mainSource.feed(samples);
-        wav.pushSamples(samples);
+
+        if(captureFileName !is null)
+            wav.pushSamples(samples);
 
         auto loopTime = currentTime();
         while(mainSource.numFed() > 1 || !mainSource.ready())
@@ -65,7 +74,9 @@ class SynthCore : Core
     override void end()
     {
         closeAudio();
-        //wav.writeWAV("session.wav");
+
+        if(captureFileName !is null)
+            wav.writeWAV(captureFileName);
     }
 
     override bool receiveMessage()
