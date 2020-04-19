@@ -211,6 +211,7 @@ void buildParamLinks()
         if((pDef.controlID in paramLinks) is null)
             paramLinks[pDef.controlID] = [];
             
+        debugMSG("patch", writefln("Linking %s to %s", pDef.controlID, paramID));
         paramLinks[pDef.controlID] ~= paramID;
     }
 }
@@ -224,6 +225,7 @@ void buildSwitchLinks()
         if((sDef.controlID in switchLinks) is null)
             switchLinks[sDef.controlID] = [];
 
+        debugMSG("patch", writefln("Linking %s to %s", sDef.controlID, switchID));
         switchLinks[sDef.controlID] ~= switchID;
     }
 }
