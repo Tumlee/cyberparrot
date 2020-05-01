@@ -20,6 +20,7 @@ private cl_device_id chosenDevice;
 //A cached list of built programs.
 private cl_program[string] programs;
 
+private bool isProfilingEnabled = false;
 private bool useCLFillWorkaround = false;
 
 //=====================================================================================
@@ -27,6 +28,7 @@ private bool useCLFillWorkaround = false;
 //=====================================================================================
 void initCL()
 {
+    isProfilingEnabled = flagExists("opencl-profiling");
     debugMSG("opencl", writeln("[ INITIALIZING OPENCL ]"));
     DerelictCL.load();
     
@@ -69,7 +71,12 @@ void initCL()
     context = clCreateContext(null, 1, &chosenDevice, null, null, &errorCode);
     checkErrorCode("clCeateContext", errorCode);
         
-    queue = clCreateCommandQueue(context, chosenDevice, 0, &errorCode);
+    int hostQueueFlags = 0;
+
+    if(isProfilingEnabled)
+        hostQueueFlags |= CL_QUEUE_PROFILING_ENABLE;
+
+    queue = clCreateCommandQueue(context, chosenDevice, hostQueueFlags, &errorCode);
     checkErrorCode("clCreateCommandQueue", errorCode);
 }
 
@@ -326,9 +333,14 @@ struct CLEmptyArg
 class CLKernel
 {
     private cl_kernel kernel;
+    private string programName;
+    private string functionName;
 
-    this(string programName, string functionName)
+    this(string progName, string funcName)
     {
+        programName = progName;
+        functionName = funcName;
+
         buildProgram(programName);
         
         int errorCode;        
@@ -389,10 +401,25 @@ class CLKernel
         
         foreach(i; 0 .. tempWorkOffsets.length)
             tempWorkOffsets[i] = i < workOffsets.length ? workOffsets[i] : 0;
+
+        cl_event executionEvent;
+        cl_event* eventPtr = isProfilingEnabled ? &executionEvent : null;
             
         auto errorCode = clEnqueueNDRangeKernel(queue, kernel, cast(uint) workSizes.length,
-                                &tempWorkOffsets[0], &workSizes[0], null, 0, null, null);
+                                &tempWorkOffsets[0], &workSizes[0], null, 0, null, eventPtr);
         checkErrorCode("clEnqueueNDRangeKernel", errorCode);
+
+        if(isProfilingEnabled)
+        {
+            cl_ulong queuedTime, submitTime, startTime, endTime;
+            clWaitForEvents(1, eventPtr);
+
+            clGetEventProfilingInfo(executionEvent, CL_PROFILING_COMMAND_START, cl_ulong.sizeof, &startTime, null);
+            clGetEventProfilingInfo(executionEvent, CL_PROFILING_COMMAND_END, cl_ulong.sizeof, &endTime, null);
+            cl_ulong startToEnd = endTime - startTime;
+
+            writefln("[%s/%s %(%dx%)] %dns", programName, functionName, workSizes, startToEnd);
+        }
     }
     
     size_t getWorkGroupSize()
