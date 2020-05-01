@@ -20,6 +20,7 @@ import std.conv;
 
 uint sampleLength = 512;
 uint voiceCount = 16;
+uint zeroKernelSearchCount = 16;
 
 //FIXME: These variables should not be global... but they will be for the time being.
 float[] outSamples;
@@ -35,9 +36,10 @@ void initCyberparrot()
     sampleLength = getConfigVar("period", 512);
     voiceCount = getConfigVar("voicecount", 16);     
     audioSampleRate = getConfigVar("samplerate", 44100);
+    zeroKernelSearchCount = getConfigVar("zero-kernel-search-count", 16);
 
     PatchMap patch = loadFromJsonFile!PatchMap("patches/patch000.json".inConfigPath);
-    tree = new OpTree(patch, voiceCount, sampleLength, audioSampleRate);
+    tree = new OpTree(patch, voiceCount, sampleLength, audioSampleRate, zeroKernelSearchCount);
     
     //Build the tree.
     tree.build();

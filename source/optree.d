@@ -248,6 +248,7 @@ class OpTree
     float[2] pitchWheel = [0, 0];   //index 0 stores current value, 1 stores old value.
     uint voiceCount;
     uint sampleCount;
+    uint zeroKernelSearchCount;
 
     //The list of currently active voices, stored as voice number.
     VoiceInfo[] activeVoices;
@@ -278,7 +279,7 @@ class OpTree
     //Delta-time per sample
     float timeStep;
         
-    this(PatchMap p, uint vc, uint sc, float sampleRate)
+    this(PatchMap p, uint vc, uint sc, float sampleRate, uint zksc)
     {
         assert(p !is null);
         assert(vc != 0);
@@ -287,6 +288,7 @@ class OpTree
         patch = p;
         voiceCount = vc;
         sampleCount = sc;
+        zeroKernelSearchCount = zksc;
         timeStep = 1.0 / sampleRate;
     }
 
@@ -539,7 +541,7 @@ class OpTree
                 dependency.calculate();
         }
 
-        runStreamKernels(8);   //FIXME: 8 shouldn't be hard-coded
+        runStreamKernels();
         pruneVoices();
     }
 
@@ -554,10 +556,10 @@ class OpTree
         prKernel.enqueue([sampleCount, activeVoices.length]);
     }
 
-    void runStreamKernels(uint searches)
+    void runStreamKernels()
     {
         gsKernel.setArg(3, cast(uint) activeVoices.length);
-        fzKernel.enqueue([sampleCount / searches, activeVoices.length]);
+        fzKernel.enqueue([sampleCount / zeroKernelSearchCount, activeVoices.length]);
         gsKernel.enqueue([sampleCount]);
 
         //Store current pitchwheel value into "old" pitchwheel value.
@@ -624,12 +626,12 @@ class OpTree
             output.updateBlockIDs();
 
         debugMSG("patch", writeln("[Initializing main kernels...]"));
-        initDeviceData(8);
+        initDeviceData();
         
         isBuilt = true;
     }
 
-    void initDeviceData(uint searches)
+    void initDeviceData()
     {
         //Allocate the device heap.
         heap.allocate();
@@ -647,8 +649,8 @@ class OpTree
                         resolveBlockIDs("noteFrequency")[0] * blockSize,
                         devicePitchWheel);
 
-        //'searches' must be a mutliple of the block width.
-        assert(sampleCount % searches == 0);
+        //'searches per work item' must be a multiple of the block width.
+        assert(sampleCount % zeroKernelSearchCount == 0);
 
         auto lBlock = outputs["lchannel"].cachedBlocks.ids[0];
         auto rBlock = outputs["rchannel"].cachedBlocks.ids[0];
@@ -658,18 +660,18 @@ class OpTree
         //groups there are. Unfortunately, it is not possible to predict the work group size
         //that OpenCL will choose when passing it a null 'work_group_size'
         //Thus, we have to assume the worst case (get_local_size == 1)
-        finds = new CLMemory!uint((sampleCount / searches) * voiceCount);
+        finds = new CLMemory!uint((sampleCount / zeroKernelSearchCount) * voiceCount);
         numFinds = new CLMemory!uint(1);
         stream = new CLMemory!float(sampleCount * 2);   //FIXME: Should be number of channels?
         clipPositions = new CLMemory!uint(voiceCount);
 
         fzKernel = new CLKernel("build_stream", "findZeros");
-        fzKernel.setArgs(heap.memory, deviceVInfo, eBlock * blockSize, searches,
+        fzKernel.setArgs(heap.memory, deviceVInfo, eBlock * blockSize, zeroKernelSearchCount,
                             CLLocalArg!uint(fzKernel.getWorkGroupSize), finds, numFinds);
 
         gsKernel = new CLKernel("build_stream", "generateStream");
         gsKernel.setArgs(heap.memory, stream, deviceVInfo, CLEmptyArg(),
-                            lBlock * blockSize, rBlock * blockSize, finds, numFinds, sampleCount / searches);
+                            lBlock * blockSize, rBlock * blockSize, finds, numFinds, sampleCount / zeroKernelSearchCount);
 
         //Allow each Operator to set up its own device-side data
         foreach(operator; operators)
