@@ -66,7 +66,7 @@ void analyzePerformance()
         
         generateSamples();
          
-        float elapsed = cast(float) ((currentTime - startTime)).total!"usecs";
+        float elapsed = cast(float) (currentTime - startTime).total!"usecs";
         float goal = cast(float) getAudioLengthMono(sampleLength).total!"usecs";
         float stress = (elapsed / goal) * 100.0; 
         sampler.pushSample(stress);
